@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Binaural Dissonance Simulator</title>
+  <script type="module" crossorigin src="/assets/index-CRmh46xo.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DZljxwG2.css">
+</head>
+<body>
+  <!-- Header -->
+  <header id="app-header">
+    <h1>Binaural Dissonance Simulator</h1>
+    <div class="header-right">
+      <button id="mode-toggle" class="btn btn-mode">3D Walk Mode</button>
+      <div class="headphone-notice">
+        <span class="notice-icon">&#127911;</span>
+        <span>Headphones Required</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="app-layout" class="app-layout">
+    <!-- 3D Walking Viewport (hidden by default) -->
+    <div id="walking-viewport" class="walking-viewport" hidden></div>
+
+    <!-- Main Content (original layout) -->
+    <div id="main-content" class="main-content">
+      <!-- Drop Zone -->
+      <section id="drop-zone" class="drop-zone">
+        <div class="drop-zone-content">
+          <p class="drop-zone-label">Drop an audio file here</p>
+          <p class="drop-zone-sub">or</p>
+          <button id="file-pick-btn" class="btn btn-accent">Choose File</button>
+          <input type="file" id="file-input" accept="audio/*" hidden />
+          <p class="drop-zone-hint">MP3, WAV, OGG, FLAC supported</p>
+        </div>
+        <p id="drop-zone-error" class="drop-zone-error" hidden></p>
+      </section>
+
+      <!-- File Info Bar -->
+      <section id="file-info" class="file-info" hidden>
+        <span id="file-name" class="file-name"></span>
+        <span id="file-duration" class="file-duration"></span>
+      </section>
+
+      <!-- Transport Bar -->
+      <section id="transport" class="transport" hidden>
+        <div class="transport-buttons">
+          <button id="btn-play" class="btn btn-transport" title="Play (Space)">&#9654;</button>
+          <button id="btn-pause" class="btn btn-transport" title="Pause (Space)" hidden>&#9208;</button>
+          <button id="btn-stop" class="btn btn-transport" title="Stop (S)">&#9632;</button>
+        </div>
+        <input type="range" id="seek-bar" class="seek-bar" min="0" max="100" step="0.1" value="0" />
+        <span id="time-display" class="time-display">0:00 / 0:00</span>
+        <button id="btn-loop" class="btn btn-transport btn-loop" title="Loop (L)">&#128257;</button>
+      </section>
+
+      <!-- Controls Grid -->
+      <section id="controls" class="controls-grid" hidden>
+
+        <!-- Per-Ear Detuning Panel -->
+        <div class="panel" id="panel-detune">
+          <h2 class="panel-title">Per-Ear Detuning</h2>
+          <div class="control-row">
+            <label>L <span id="detune-l-val" class="val-badge">0</span> cents</label>
+            <input type="range" id="detune-l" min="-100" max="100" step="1" value="0" />
+          </div>
+          <div class="control-row">
+            <label>R <span id="detune-r-val" class="val-badge">0</span> cents</label>
+            <input type="range" id="detune-r" min="-100" max="100" step="1" value="0" />
+          </div>
+          <div class="control-row control-row-inline">
+            <label class="toggle-label">
+              <input type="checkbox" id="detune-link" /> Link
+            </label>
+            <select id="detune-link-mode" disabled>
+              <option value="mirror">Mirror (L=+N, R=-N)</option>
+              <option value="parallel">Parallel (L=R=N)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Phase Smear Panel -->
+        <div class="panel" id="panel-smear">
+          <h2 class="panel-title">Phase Smear</h2>
+          <div class="control-row">
+            <label>Depth <span id="smear-depth-val" class="val-badge">0.00</span></label>
+            <input type="range" id="smear-depth" min="0" max="1" step="0.01" value="0" />
+          </div>
+          <div class="control-row">
+            <label>Rate <span id="smear-rate-val" class="val-badge">1.0</span> Hz</label>
+            <input type="range" id="smear-rate" min="0.1" max="10" step="0.1" value="1.0" />
+          </div>
+          <div class="control-row">
+            <label class="toggle-label">
+              <input type="checkbox" id="smear-independent" /> Independent L/R
+            </label>
+          </div>
+          <div id="smear-independent-controls" class="sub-controls" hidden>
+            <div class="control-row">
+              <label>L Rate <span id="smear-rate-l-val" class="val-badge">1.0</span> Hz</label>
+              <input type="range" id="smear-rate-l" min="0.1" max="10" step="0.1" value="1.0" />
+            </div>
+            <div class="control-row">
+              <label>R Rate <span id="smear-rate-r-val" class="val-badge">1.0</span> Hz</label>
+              <input type="range" id="smear-rate-r" min="0.1" max="10" step="0.1" value="1.0" />
+            </div>
+          </div>
+          <div class="control-row">
+            <label>Dry / Wet <span id="dry-wet-val" class="val-badge">0.00</span></label>
+            <input type="range" id="dry-wet" min="0" max="1" step="0.01" value="0" />
+          </div>
+        </div>
+
+        <!-- Binaural Beat Panel -->
+        <div class="panel" id="panel-binaural">
+          <h2 class="panel-title">Binaural Beat</h2>
+          <div id="binaural-tones"></div>
+          <button id="binaural-add-tone" class="btn btn-add-tone">+ Add Tone</button>
+        </div>
+
+        <!-- 3D Spatial Position Panel -->
+        <div class="panel panel-wide" id="panel-spatial">
+          <h2 class="panel-title">3D Spatial Position</h2>
+          <div class="control-row">
+            <label class="toggle-label">
+              <input type="checkbox" id="spatial-active" /> Enable HRTF
+            </label>
+          </div>
+          <div class="spatial-pad-wrapper">
+            <canvas id="spatial-pad" class="spatial-pad" width="300" height="300"></canvas>
+            <div class="spatial-elev-wrapper">
+              <span class="spatial-elev-label">Above</span>
+              <input type="range" id="spatial-elev" class="spatial-elev" min="-1" max="1" step="0.01" value="0" orient="vertical" />
+              <span class="spatial-elev-label">Below</span>
+            </div>
+          </div>
+          <div class="spatial-readout">
+            <span>Az <span id="spatial-azimuth" class="val-badge">0</span>&deg;</span>
+            <span>Dist <span id="spatial-distance" class="val-badge">0.0</span></span>
+            <span>Elev <span id="spatial-elev-val" class="val-badge">0.0</span></span>
+            <span>X <span id="spatial-x" class="val-badge">0.0</span></span>
+            <span>Z <span id="spatial-z" class="val-badge">0.0</span></span>
+          </div>
+        </div>
+
+        <!-- Output Panel -->
+        <div class="panel" id="panel-output">
+          <h2 class="panel-title">Output</h2>
+          <div class="control-row">
+            <label>Master Vol <span id="master-vol-val" class="val-badge">0.80</span></label>
+            <input type="range" id="master-vol" min="0" max="1" step="0.01" value="0.80" />
+          </div>
+          <div class="control-row">
+            <label class="toggle-label">
+              <input type="checkbox" id="compressor-active" checked /> Limiter
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Presets Bar -->
+      <section id="presets" class="presets-bar" hidden>
+        <button class="btn btn-preset" data-preset="subtle">Subtle Unease</button>
+        <button class="btn btn-preset" data-preset="full">Full Disorientation</button>
+        <button class="btn btn-preset" data-preset="focus">Binaural Focus</button>
+      </section>
+
+      <!-- Visualization -->
+      <section id="visualization" class="visualization" hidden>
+        <div class="vis-container">
+          <canvas id="canvas-waveform"></canvas>
+          <div id="smear-indicator" class="smear-indicator" hidden>SMEAR</div>
+        </div>
+        <canvas id="canvas-spectrum"></canvas>
+      </section>
+    </div>
+  </div>
+
+</body>
+</html>
